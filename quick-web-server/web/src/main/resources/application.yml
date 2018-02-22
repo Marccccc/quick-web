@@ -1,0 +1,3 @@
+spring:
+  jackson:
+    default-property-inclusion: non_null # null字段不转换JSON字段
