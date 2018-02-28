@@ -20,4 +20,8 @@
 		SELECT * FROM USER WHERE id=#{id}
 	</select>
 
+	<select id="getUserByName" resultMap="PageResult" >
+		SELECT * FROM USER WHERE name=#{name}
+	</select>
+
 </mapper>

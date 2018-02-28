@@ -10,3 +10,16 @@ spring:
 mybatis:
   mapper-locations: classpath:mapper/*.xml
 
+jwt:
+  header: Authorization
+  secret: 123456
+  expiration: 604800
+  tokenHead: "Bearer"
+  route:
+    authentication:
+      path: auth
+      refresh: refresh
+      register: "session/1"
+debug: true
+logging:
+  level: debug
