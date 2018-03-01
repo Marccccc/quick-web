@@ -5,23 +5,31 @@ import com.cc.com.service.UserService;
 import com.cc.entity.User;
 import com.cc.pack.Response;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.method.P;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+/**
+ * Token会话Controller
+ * @author cyc
+ */
 @RestController
 public class SessionController {
 
     @Autowired
     private UserService userService;
+
     @Autowired
     private AuthService authService;
 
-    @GetMapping("/session/{id}")
-    public Response hello(@PathVariable("id")Integer userId) {
-        User user=userService.getUser(userId);
-        return new Response().success(authService.login(user.getName(),user.getPassword()));
+    /**
+     * 验证用户账户密码返回生成的token
+     * @param user 组装一个User
+     * @return 生成的JWT的Token
+     */
+    @PostMapping("/session")
+    public Response login(@RequestBody User user) {
+        return new Response().success(authService.login(user.getAccount(),user.getPassword()));
     }
 
 }

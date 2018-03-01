@@ -2,11 +2,11 @@ package com.cc.advance;
 
 import com.cc.exception.AuthorException;
 import com.cc.exception.BusinessException;
-import com.cc.pack.CustomCode;
 import com.cc.pack.Response;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -22,37 +22,52 @@ import java.util.List;
  * 统一异常捕获返回类
  *
  * @author cyc
- */ 
+ */
 @Slf4j
 @ControllerAdvice
 @ResponseBody
 public class ExceptionAdvice {
 
     /**
-     * 参数无法转换为JSON
+     * 400 - 参数无法转换为JSON
      */
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public Response handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
         log.error("不能转换为JSON", e);
-        return new Response().failure(CustomCode.TO_JSON_FAILED);
+        return new Response().failure("不能转换为JSON");
     }
 
     /**
-     * 未通过自动参数校验
+     * 400 - 未通过自动参数校验
      */
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public Response handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
         log.error("参数校验未通过", e);
-        return new Response().failure(CustomCode.ARGUMENT_NOT_VALID,"参数校验未通过",e.getBindingResult().getFieldErrors());
+        List<String> verifyFieldsErrors = new LinkedList<>();
+        e.getBindingResult().getFieldErrors().forEach(fieldError -> verifyFieldsErrors.add(fieldError.getDefaultMessage()));
+        return new Response().failure("参数校验未通过!"+ verifyFieldsErrors);
     }
 
     /**
-     * 无授权登录
+     * 401 - 无授权登录
      */
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ExceptionHandler(AccessDeniedException.class)
+    public Response handleAccessDeniedException(AccessDeniedException e) {
+        log.error("", e);
+        return new Response().failure("未登录或登录已过期");
+    }
+
+    /**
+     * 401 - 无授权登录
+     */
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
     @ExceptionHandler(AuthorException.class)
-    public Response handleAuthorException(AuthorException e) {
+    public Response handleAuthorException(BusinessException e) {
         log.error("未登录或登录已过期", e);
-        return new Response().failure(CustomCode.UNAUTHORIZED);
+        return new Response().failure("未登录或登录已过期");
     }
 
     /**

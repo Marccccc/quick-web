@@ -4,10 +4,10 @@ import com.cc.com.service.UserService;
 import com.cc.dao.UserDao;
 import com.cc.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.method.P;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -22,16 +22,19 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     }
 
     @Override
-    public User getUserByName(String name) {
-        return userDao.getUserByName(name);
+    public int save(User user) {
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        user.setPassword(encoder.encode(user.getPassword()));
+        return userDao.save(user);
     }
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user=userDao.getUserByName(username);
-        if(user==null) {
-            new UsernameNotFoundException("未找到此用户");
+    public UserDetails loadUserByUsername(String userAccount) {
+        User user = userDao.getUserByAccount(userAccount);
+        if (user == null) {
+            throw new UsernameNotFoundException("未找到此用户");
         }
         return user;
     }
+
 }

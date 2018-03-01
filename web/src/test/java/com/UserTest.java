@@ -1,7 +1,9 @@
 package com;
 
 import com.cc.WebApplication;
+import com.cc.com.service.UserService;
 import com.cc.dao.UserDao;
+import com.cc.entity.User;
 import com.cc.pack.Response;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,6 +32,8 @@ public class UserTest {
 
     @Autowired
     private UserDao userDao;
+    @Autowired
+    private UserService userService;
 
     @Before
     public void initMock(){
@@ -45,6 +49,15 @@ public class UserTest {
     @Test
     public void testController(){
         System.out.println(userDao.getUserById(1));
+    }
+
+    @Test
+    public void testSaveUser(){
+        User user=new User();
+        user.setAccount("test-one");
+        user.setName("测试");
+        user.setPassword("123456");
+        userService.save(user);
     }
 
 }

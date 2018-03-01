@@ -15,10 +15,19 @@ public interface UserDao {
     User getUserById(Integer id);
 
     /**
-     * 通过用户名获取用户
+     * 通过用户账户获取用户
      *
-     * @param name 用户名
+     * @param account 用户账户
      * @return User
      */
-    User getUserByName(String name);
+    User getUserByAccount(String account);
+
+    /**
+     * 保存用户
+     *
+     * @param user 新增用户用户
+     * @return User
+     */
+    int save(User user);
+
 }

@@ -18,13 +18,24 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+/**
+ * JWT的Token工具类
+ * @author cyc
+ */
 @Component
 public class JwtTokenUtil {
 
-    private static final long serialVersionUID = -3301605591108950415L;
-
+    /**
+     * 该JWT所面向的用户
+     */
     static final String CLAIM_KEY_USERNAME = "sub";
+    /**
+     * 接收该JWT的一方
+     */
     static final String CLAIM_KEY_AUDIENCE = "aud";
+    /**
+     * JWT签发时间
+     */
     static final String CLAIM_KEY_CREATED = "iat";
 
     static final String AUDIENCE_UNKNOWN = "unknown";
@@ -40,93 +51,103 @@ public class JwtTokenUtil {
     @Value("${jwt.expiration}")
     private Long expiration;
 
-    public String getUsernameFromToken(String token) {
+    /**
+     * 获取ToKen中用户账户
+     *
+     * @param token JWT的Token字符串
+     * @return Date 到期时间
+     */
+    public String getUserIdFromToken(String token) {
         return getClaimFromToken(token, Claims::getSubject);
     }
 
-    public Date getIssuedAtDateFromToken(String token) {
-        return getClaimFromToken(token, Claims::getIssuedAt);
-    }
-
+    /**
+     * 获取ToKen过期时间
+     *
+     * @param token JWT的Token字符串
+     * @return Date 到期时间
+     */
     public Date getExpirationDateFromToken(String token) {
         return getClaimFromToken(token, Claims::getExpiration);
     }
 
-    public String getAudienceFromToken(String token) {
-        return getClaimFromToken(token, Claims::getAudience);
-    }
-
-    public <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
+    /**
+     * 从荷载Claim获取信息
+     *
+     * @param token          jwt字符串
+     * @param claimsResolver 获取类型
+     * @param <T>            要求返回类型
+     * @return 返回类型
+     */
+    private <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = getAllClaimsFromToken(token);
         return claimsResolver.apply(claims);
     }
 
+
+    /**
+     * 获取JWT上的荷载
+     *
+     * @param token JWT字符串
+     * @return Claims 荷载信息
+     */
     private Claims getAllClaimsFromToken(String token) {
-        return Jwts.parser()
-                .setSigningKey(secret)
-                .parseClaimsJws(token)
-                .getBody();
+        return Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody();
     }
 
+    /**
+     * 检测Token是否过期
+     *
+     * @param token JWT字符串
+     * @return 检测结果
+     */
     private Boolean isTokenExpired(String token) {
         final Date expiration = getExpirationDateFromToken(token);
         return expiration.before(clock.now());
     }
 
-    private Boolean isCreatedBeforeLastPasswordReset(Date created, Date lastPasswordReset) {
-        return (lastPasswordReset != null && created.before(lastPasswordReset));
-    }
-
-
-    private Boolean ignoreTokenExpiration(String token) {
-        String audience = getAudienceFromToken(token);
-        return (AUDIENCE_TABLET.equals(audience) || AUDIENCE_MOBILE.equals(audience));
-    }
-
+    /**
+     * 生成JWT的Token
+     * @param userDetails 用户信息
+     * @return Token
+     */
     public String generateToken(UserDetails userDetails) {
-        final Date createdDate = clock.now();
-        Map<String, Object> claims = new HashMap<>();
-        return Jwts.builder()
-                .setClaims(claims)
-                .setExpiration(createdDate)
-                .signWith(SignatureAlgorithm.HS512, secret) //采用什么算法是可以自己选择的，不一定非要采用HS512
-                .compact();
-
+        //设置有效期
+        final Date expirationDate = calculateExpirationDate(new Date());
+        //创建JWT的Token字符串
+        return Jwts.builder().setSubject("" + userDetails.getUsername()).setIssuedAt(new Date()).setExpiration(expirationDate).signWith(SignatureAlgorithm.HS256, secret).compact();
     }
 
-
-    public Boolean canTokenBeRefreshed(String token, Date lastPasswordReset) {
-        final Date created = getIssuedAtDateFromToken(token);
-        return !isCreatedBeforeLastPasswordReset(created, lastPasswordReset)
-                && (!isTokenExpired(token) || ignoreTokenExpiration(token));
-    }
-
+    /**
+     * 刷新JWT的Token
+     * @param token JWT的Token
+     * @return 新Token
+     */
     public String refreshToken(String token) {
-        final Date createdDate = clock.now();
+        final Date createdDate = new Date();
         final Date expirationDate = calculateExpirationDate(createdDate);
-
         final Claims claims = getAllClaimsFromToken(token);
-        claims.setIssuedAt(createdDate);
-        claims.setExpiration(expirationDate);
-
-        return Jwts.builder()
-                .setClaims(claims)
-                .signWith(SignatureAlgorithm.HS512, secret)
-                .compact();
+        return Jwts.builder().setClaims(claims).setIssuedAt(createdDate).setExpiration(expirationDate).signWith(SignatureAlgorithm.HS256, secret).compact();
     }
 
+    /**
+     * 验证Token的有效性
+     *
+     * @param token
+     * @param userDetails
+     * @return
+     */
     public Boolean validateToken(String token, UserDetails userDetails) {
         User user = (User) userDetails;
-        final String username = getUsernameFromToken(token);
-        final Date created = getIssuedAtDateFromToken(token);
-        //final Date expiration = getExpirationDateFromToken(token);
-        return (
-                username.equals(user.getUsername())
-                        && !isTokenExpired(token)
-                        && !isCreatedBeforeLastPasswordReset(created, user.getLastPasswordResetDate())
-        );
+        final String username = getUserIdFromToken(token);
+        return username.equals(user.getUsername()) && !isTokenExpired(token);
     }
 
+    /**
+     * 计算增加有效期
+     * @param createdDate 待增加的日期
+     * @return 增加日期结果
+     */
     private Date calculateExpirationDate(Date createdDate) {
         return new Date(createdDate.getTime() + expiration * 1000);
     }
